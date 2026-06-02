@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Square, QrCode, Barcode } from 'lucide-react'
+import { Play, Square, QrCode, Barcode, Lock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -16,6 +17,10 @@ import {
   type BatchStatus,
 } from './utils/batch-generate'
 
+function buildDefaultTemplate(columns: string[]): string {
+  return columns.map((col) => `{${col}}`).join(',')
+}
+
 export default function BatchPage(): JSX.Element {
   const [rows, setRows] = useState<BatchRow[]>([])
   const [columns, setColumns] = useState<string[]>([])
@@ -25,8 +30,16 @@ export default function BatchPage(): JSX.Element {
   const [status, setStatus] = useState<BatchStatus>('idle')
   const [results, setResults] = useState<BatchResult[]>([])
   const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const [encrypted, setEncrypted] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const templateEditedRef = useRef(false)
 
-  const canGenerate = rows.length > 0 && template.trim().length > 0 && status !== 'running'
+  const canGenerate =
+    rows.length > 0 &&
+    template.trim().length > 0 &&
+    status !== 'running' &&
+    (!encrypted || password.trim().length > 0)
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate) return
@@ -38,9 +51,10 @@ export default function BatchPage(): JSX.Element {
       const batchResults = await generateBatch(
         rows,
         template,
-        batchType,
+        encrypted ? 'qr' : batchType,
         barcodeFormat,
         (current, total) => setProgress({ current, total }),
+        encrypted ? password : undefined,
       )
       setResults(batchResults)
       setStatus('done')
@@ -52,7 +66,7 @@ export default function BatchPage(): JSX.Element {
       setStatus('error')
       toast({ type: 'error', title: '批量生成失败', description: String(err) })
     }
-  }, [canGenerate, rows, template, batchType, barcodeFormat])
+  }, [canGenerate, rows, template, batchType, barcodeFormat, encrypted, password])
 
   const handleStop = useCallback(() => {
     setStatus('idle')
@@ -76,7 +90,19 @@ export default function BatchPage(): JSX.Element {
             </span>
             <h2 className="font-display text-base font-semibold text-brand-text-primary">导入数据</h2>
           </div>
-          <FileImporter onDataLoaded={(r, c) => { setRows(r); setColumns(c) }} />
+          <FileImporter
+            onDataLoaded={(r, c) => {
+              setRows(r)
+              setColumns(c)
+              if (c.length === 0) {
+                // File was cleared — reset edit flag for next import
+                templateEditedRef.current = false
+              } else if (!templateEditedRef.current) {
+                // Only auto-generate template if user hasn't manually edited it
+                setTemplate(buildDefaultTemplate(c))
+              }
+            }}
+          />
         </div>
 
         {/* Step 2: Template */}
@@ -110,9 +136,11 @@ export default function BatchPage(): JSX.Element {
                     <QrCode className="w-4 h-4" /> QR Code
                   </button>
                   <button
-                    onClick={() => setBatchType('barcode')}
+                    onClick={() => !encrypted && setBatchType('barcode')}
+                    disabled={encrypted}
                     className={cn(
                       'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all',
+                      encrypted && 'opacity-40 cursor-not-allowed',
                       batchType === 'barcode'
                         ? 'bg-brand-accent/10 text-brand-accent'
                         : 'text-brand-text-secondary hover:text-brand-text-primary',
@@ -120,7 +148,7 @@ export default function BatchPage(): JSX.Element {
                   >
                     <Barcode className="w-4 h-4" /> 条码
                   </button>
-                  {batchType === 'barcode' && (
+                  {!encrypted && batchType === 'barcode' && (
                     <select
                       value={barcodeFormat}
                       onChange={(e) => setBarcodeFormat(e.target.value)}
@@ -135,7 +163,51 @@ export default function BatchPage(): JSX.Element {
                   )}
                 </div>
 
-                <TemplateEditor columns={columns} template={template} onChange={setTemplate} />
+                {/* Encryption toggle */}
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-brand-border cursor-pointer hover:border-brand-border-hover transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={encrypted}
+                    onChange={(e) => {
+                      setEncrypted(e.target.checked)
+                      if (e.target.checked) setBatchType('qr')
+                    }}
+                    className="accent-brand-primary w-4 h-4"
+                  />
+                  <Lock className="w-4 h-4 text-brand-accent" />
+                  <div>
+                    <p className="text-sm font-medium text-brand-text-primary">AES-256-GCM 加密</p>
+                    <p className="text-xs text-brand-text-secondary">内容加密后生成，需密码才能解密</p>
+                  </div>
+                </label>
+
+                {/* Password input */}
+                {encrypted && (
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="设置解密密码..."
+                      className="pr-10 font-mono"
+                    />
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-text-muted"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
+
+                <TemplateEditor
+                  columns={columns}
+                  template={template}
+                  onChange={(t) => {
+                    templateEditedRef.current = true
+                    setTemplate(t)
+                  }}
+                />
               </div>
             </motion.div>
           </AnimatePresence>
@@ -170,7 +242,8 @@ export default function BatchPage(): JSX.Element {
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 mr-2" /> 开始生成
+                      <Play className="w-4 h-4 mr-2" />
+                      {encrypted ? '生成加密二维码' : '开始生成'}
                     </>
                   )}
                 </Button>

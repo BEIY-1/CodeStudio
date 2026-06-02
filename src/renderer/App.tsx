@@ -6,7 +6,7 @@ import GeneratorPage from '@/modules/generator/GeneratorPage'
 import DecoderPage from '@/modules/decoder/DecoderPage'
 import BatchPage from '@/modules/batch/BatchPage'
 import ScanWorkspacePage from '@/modules/scan-workspace/ScanWorkspacePage'
-import HistoryPage from '@/modules/history/HistoryPage'
+import LabelDesignerPage from '@/modules/label-designer/LabelDesignerPage'
 import SettingsPage from '@/modules/settings/SettingsPage'
 
 function AppRoutes(): JSX.Element {
@@ -47,10 +47,10 @@ function AppRoutes(): JSX.Element {
           }
         />
         <Route
-          path="history"
+          path="label-designer"
           element={
             <ErrorBoundary>
-              <HistoryPage />
+              <LabelDesignerPage />
             </ErrorBoundary>
           }
         />

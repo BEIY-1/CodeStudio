@@ -11,6 +11,7 @@ export type IpcApi = {
       defaultName: string,
       filters: { name: string; extensions: string[] }[],
     ) => Promise<{ filePath: string | null }>
+    openDirectory: () => Promise<{ dirPath: string | null }>
     write: (path: string, data: string, encoding?: 'utf-8' | 'base64') => Promise<{ success: boolean }>
     read: (path: string, encoding?: 'utf-8' | 'base64') => Promise<{ data: string | null }>
   }
@@ -34,6 +35,7 @@ const api: IpcApi = {
   file: {
     saveDialog: (defaultName, filters) =>
       ipcRenderer.invoke('file:save-dialog', { defaultName, filters }),
+    openDirectory: () => ipcRenderer.invoke('file:open-directory'),
     write: (path, data, encoding) => ipcRenderer.invoke('file:write', { path, data, encoding }),
     read: (path, encoding) => ipcRenderer.invoke('file:read', { path, encoding }),
   },

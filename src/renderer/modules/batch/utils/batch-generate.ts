@@ -1,5 +1,6 @@
 import { toCanvas } from 'qrcode'
 import JsBarcode from 'jsbarcode'
+import { encrypt } from '@/utils/crypto'
 
 export type BatchType = 'qr' | 'barcode'
 export type BatchStatus = 'idle' | 'running' | 'done' | 'error'
@@ -19,16 +20,20 @@ export interface BatchResult {
 }
 
 export function parseTemplate(template: string, row: BatchRow): string {
-  return template.replace(/\{(\w+)\}/g, (_match, key: string) => {
+  return template.replace(/\{([^}]+)\}/g, (_match, key: string) => {
     return row[key] ?? `{${key}}`
   })
 }
 
-export async function generateQRDataUrl(content: string, size = 256): Promise<string> {
+export async function generateQRDataUrl(
+  content: string,
+  size = 256,
+  errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H' = 'M',
+): Promise<string> {
   const canvas = document.createElement('canvas')
   await toCanvas(canvas, content, {
     width: size,
-    errorCorrectionLevel: 'M',
+    errorCorrectionLevel,
     color: { dark: '#F1F5F9', light: '#0B0F14' },
     margin: 1,
   })
@@ -53,7 +58,7 @@ export function generateBarcodeSvg(
   })
   const svgData = new XMLSerializer().serializeToString(svg)
   // Convert SVG to data URL
-  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`
+  return `data:image/svg+xml;base64,${btoa(svgData)}`
 }
 
 export async function generateBatch(
@@ -62,15 +67,20 @@ export async function generateBatch(
   type: BatchType,
   barcodeFormat: string,
   onProgress: (current: number, total: number) => void,
+  password?: string,
 ): Promise<BatchResult[]> {
   const results: BatchResult[] = []
+  const encrypting = !!password
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!
-    const content = parseTemplate(template, row)
+    let content = parseTemplate(template, row)
     try {
       let dataUrl: string | null = null
-      if (type === 'qr') {
+      if (encrypting) {
+        content = await encrypt(content, password!)
+        dataUrl = await generateQRDataUrl(content, 256, 'H')
+      } else if (type === 'qr') {
         dataUrl = await generateQRDataUrl(content)
       } else {
         dataUrl = generateBarcodeSvg(content, barcodeFormat)

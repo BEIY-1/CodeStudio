@@ -14,7 +14,7 @@ export async function decodeSingleFromImageData(imageData: ImageData): Promise<D
   // ── Try jsQR first (QR codes) ──────────────────────
   try {
     const qr = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
+      inversionAttempts: 'attemptBoth',
     })
     if (qr) {
       return { text: qr.data, format: 'QR Code', timestamp: Date.now() }
@@ -42,7 +42,7 @@ export async function decodeFromImageData(imageData: ImageData): Promise<DecodeR
   // jsQR can only find one QR code per image
   try {
     const qr = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
+      inversionAttempts: 'attemptBoth',
     })
     if (qr) {
       results.push({ text: qr.data, format: 'QR Code', timestamp: Date.now() })

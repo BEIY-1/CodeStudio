@@ -35,6 +35,23 @@ export function registerFileIpc(): void {
     }
   })
 
+  ipcMain.handle('file:open-directory', async () => {
+    try {
+      const window = BrowserWindow.getFocusedWindow()
+      if (!window) return { dirPath: null }
+
+      const result = await dialog.showOpenDialog(window, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: '选择导出目录',
+      })
+
+      return { dirPath: result.canceled ? null : (result.filePaths[0] ?? null) }
+    } catch (error) {
+      console.error('file:open-directory error:', error)
+      return { dirPath: null }
+    }
+  })
+
   ipcMain.handle('file:write', async (_event, args: FileWriteArgs) => {
     try {
       if (args.encoding === 'base64') {

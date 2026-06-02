@@ -13,35 +13,49 @@ export function BatchResults({ results }: BatchResultsProps): JSX.Element {
   const failCount = results.filter((r) => r.status === 'failed').length
 
   const handleExportAll = async () => {
-    const result = await window.api.file.saveDialog('batch-export.zip', [
-      { name: 'Files', extensions: ['zip'] },
-    ])
-    if (result.filePath) {
-      // Export as a simple directory approach - save each as individual file
-      // In practice, use archiver for zip. For MVP, show a summary
-      const summary = results
-        .filter((r) => r.status === 'success')
-        .map((r) => `${r.content}`)
-        .join('\n')
+    const dirResult = await window.api.file.openDirectory()
+    if (!dirResult.dirPath) return
 
-      const summaryPath = result.filePath.replace('.zip', '.txt')
-      await window.api.file.write(summaryPath, summary)
-      toast({ type: 'success', title: `已导出 ${successCount} 条` })
+    let exported = 0
+    for (const result of results) {
+      if (result.status !== 'success' || !result.dataUrl) continue
+
+      const base64 = result.dataUrl.split(',')[1]
+      if (!base64) continue
+
+      const isSvg = result.dataUrl.startsWith('data:image/svg+xml')
+      const ext = isSvg ? 'svg' : 'png'
+      const filename = `batch-${result.index + 1}.${ext}`
+      const filePath = `${dirResult.dirPath}\\${filename}`
+      const encoding = isSvg ? 'utf-8' : 'base64'
+      const data = isSvg ? atob(base64) : base64
+
+      const writeResult = await window.api.file.write(filePath, data, encoding)
+      if (writeResult.success) exported++
     }
+
+    toast({ type: 'success', title: `已导出 ${exported} 个文件` })
   }
 
   const handleExportSingle = async (result: BatchResult) => {
     if (!result.dataUrl) return
     try {
-      // Convert dataUrl to blob-like data
       const base64 = result.dataUrl.split(',')[1]
       if (!base64) return
-      const filename = `batch-${result.index + 1}.png`
+
+      // Detect MIME type from dataUrl: QR → PNG, barcode → SVG
+      const isSvg = result.dataUrl.startsWith('data:image/svg+xml')
+      const ext = isSvg ? 'svg' : 'png'
+      const filterName = isSvg ? 'SVG Image' : 'PNG Image'
+      const filename = `batch-${result.index + 1}.${ext}`
+
       const saveResult = await window.api.file.saveDialog(filename, [
-        { name: 'PNG Image', extensions: ['png'] },
+        { name: filterName, extensions: [ext] },
       ])
       if (saveResult.filePath && base64) {
-        await window.api.file.write(saveResult.filePath, base64, 'base64')
+        const encoding = isSvg ? 'utf-8' : 'base64'
+        const data = isSvg ? atob(base64) : base64
+        await window.api.file.write(saveResult.filePath, data, encoding)
         toast({ type: 'success', title: `已导出: ${filename}` })
       }
     } catch {

@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, QrCode, Scan, Layers, ClipboardList, History, Settings,
+  LayoutDashboard, QrCode, Scan, Layers, ClipboardList, PenTool, Settings,
   ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/app-store'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import type { LucideIcon } from 'lucide-react'
 
 const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard, QrCode, Scan, Layers, ClipboardList, History, Settings,
+  LayoutDashboard, QrCode, Scan, Layers, ClipboardList, PenTool, Settings,
 }
 
 export function Sidebar(): JSX.Element {

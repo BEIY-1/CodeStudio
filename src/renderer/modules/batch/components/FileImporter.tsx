@@ -15,11 +15,15 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
   const [dragOver, setDragOver] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ columns: string[]; rows: BatchRow[] } | null>(null)
+  const [firstRowAsHeader, setFirstRowAsHeader] = useState(true)
+  const firstRowAsHeaderRef = useRef(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastFileRef = useRef<File | null>(null)
 
   const parseFile = useCallback(
-    async (file: File) => {
+    async (file: File, useHeader: boolean) => {
       setFileName(file.name)
+      lastFileRef.current = file
       try {
         const data = await file.arrayBuffer()
         const workbook = XLSX.read(data, { type: 'array' })
@@ -27,11 +31,30 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
         if (!sheetName) throw new Error('No sheet found')
 
         const sheet = workbook.Sheets[sheetName]!
-        const jsonData = XLSX.utils.sheet_to_json<BatchRow>(sheet, { defval: '' })
 
-        if (jsonData.length === 0) throw new Error('Empty file')
+        let jsonData: BatchRow[]
+        let columns: string[]
 
-        const columns = Object.keys(jsonData[0]!)
+        if (useHeader) {
+          // First row is header
+          jsonData = XLSX.utils.sheet_to_json<BatchRow>(sheet, { defval: '' })
+          if (jsonData.length === 0) throw new Error('Empty file')
+          columns = Object.keys(jsonData[0]!)
+        } else {
+          // First row is data — generate generic column names
+          const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' })
+          if (rawRows.length === 0) throw new Error('Empty file')
+          const maxCols = Math.max(...rawRows.map((r) => r.length))
+          columns = Array.from({ length: maxCols }, (_, i) => `列${i + 1}`)
+          jsonData = rawRows.map((row) => {
+            const obj: BatchRow = {}
+            columns.forEach((col, i) => {
+              obj[col] = row[i] ?? ''
+            })
+            return obj
+          })
+        }
+
         setPreview({ columns, rows: jsonData.slice(0, 10) })
         onDataLoaded(jsonData, columns)
         toast({
@@ -51,7 +74,7 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
       e.preventDefault()
       setDragOver(false)
       const file = e.dataTransfer.files[0]
-      if (file) parseFile(file)
+      if (file) parseFile(file, firstRowAsHeaderRef.current)
     },
     [parseFile],
   )
@@ -80,7 +103,7 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
           accept=".xlsx,.xls,.csv"
           onChange={(e) => {
             const file = e.target.files?.[0]
-            if (file) parseFile(file)
+            if (file) parseFile(file, firstRowAsHeaderRef.current)
           }}
           className="hidden"
         />
@@ -96,6 +119,26 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
         </div>
       </div>
 
+      {/* Header toggle */}
+      <div className="flex items-center gap-2 text-sm">
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={firstRowAsHeader}
+            onChange={(e) => {
+              setFirstRowAsHeader(e.target.checked)
+              firstRowAsHeaderRef.current = e.target.checked
+              if (lastFileRef.current) {
+                parseFile(lastFileRef.current, e.target.checked)
+              }
+            }}
+            className="sr-only peer"
+          />
+          <div className="w-8 h-4 bg-brand-border rounded-full peer peer-checked:bg-brand-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all" />
+        </label>
+        <span className="text-brand-text-secondary">首行为表头</span>
+      </div>
+
       {/* File info */}
       {fileName && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-brand-hover text-sm">
@@ -109,6 +152,7 @@ export function FileImporter({ onDataLoaded }: FileImporterProps): JSX.Element {
             onClick={() => {
               setFileName(null)
               setPreview(null)
+              onDataLoaded([], [])
             }}
             className="ml-auto text-brand-text-muted hover:text-brand-danger"
           >

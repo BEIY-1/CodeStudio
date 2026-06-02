@@ -77,7 +77,7 @@ export function TemplateEditor({ columns, template, onChange }: TemplateEditorPr
             <div className="mt-3 pt-3 border-t border-brand-border">
               <span className="text-xs text-brand-text-muted">输出: </span>
               <code className="text-xs font-mono text-brand-accent">
-                {template.replace(/\{(\w+)\}/g, (_m, key: string) => previewVars[key] ?? `{${key}}`)}
+                {template.replace(/\{([^}]+)\}/g, (_m, key: string) => previewVars[key] ?? `{${key}}`)}
               </code>
             </div>
           </CardContent>

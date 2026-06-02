@@ -5,6 +5,7 @@ export type ModuleId =
   | 'batch'
   | 'scan-workspace'
   | 'history'
+  | 'label-designer'
   | 'settings'
 
 export interface NavItem {

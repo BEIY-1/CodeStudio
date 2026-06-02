@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# Electron-builder output
+release/
+
+# Database files (local)
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backup files
+*.backup
+*.bak
+
+# Electron-builder
+builder-debug.yml
+
+# CodeStudio specific
+CodeStudio/

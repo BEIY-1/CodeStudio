@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "./out",
+    "resolveJsonModule": true,
+    "declaration": true
+  },
+  "include": [
+    "electron/**/*.ts",
+    "shared/**/*.ts",
+    "electron.vite.config.ts"
+  ]
+}

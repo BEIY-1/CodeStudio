@@ -1,0 +1,29 @@
+appId: com.codestudio.app
+productName: CodeStudio
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**/*
+  - node_modules/sql.js/**/*
+  - node_modules/qrcode/**/*
+  - node_modules/jsbarcode/**/*
+  - node_modules/jsqr/**/*
+  - node_modules/jspdf/**/*
+  - node_modules/xlsx/**/*
+  - node_modules/uuid/**/*
+  - node_modules/zustand/**/*
+  - node_modules/react/**/*
+  - node_modules/react-dom/**/*
+  - node_modules/react-router-dom/**/*
+  - node_modules/framer-motion/**/*
+  - node_modules/lucide-react/**/*
+  - node_modules/clsx/**/*
+  - node_modules/tailwind-merge/**/*
+  - node_modules/class-variance-authority/**/*
+  - node_modules/@zxing/**/*
+  - node_modules/@electron-toolkit/**/*
+win:
+  target:
+    - target: dir
+      arch: [x64]

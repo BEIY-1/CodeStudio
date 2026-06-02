@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@300;400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-brand-border;
+  }
+
+  body {
+    @apply bg-brand-bg text-brand-text-primary font-sans antialiased;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* 科技感滚动条 */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #20405A; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #305A7A; }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-primary;
+  }
+}
+
+@layer components {
+  /* 发光分隔线 */
+  .glow-divider {
+    @apply border-0 h-px;
+    background: linear-gradient(90deg, transparent, rgba(59, 164, 220, 0.2), transparent);
+  }
+}

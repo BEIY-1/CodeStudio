@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "outDir": "./out",
+    "declaration": true,
+    "paths": {
+      "@/*": ["./src/renderer/*"],
+      "@shared/*": ["./shared/*"]
+    },
+    "baseUrl": "."
+  },
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "shared/**/*.ts"
+  ]
+}

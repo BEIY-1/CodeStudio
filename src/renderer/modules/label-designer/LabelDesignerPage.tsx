@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { Settings } from 'lucide-react'
+import { Settings, Layers } from 'lucide-react'
 import { ElementToolbar } from './components/ElementToolbar'
 import { DesignerCanvas } from './components/DesignerCanvas'
 import { PropertyPanel } from './components/PropertyPanel'
+import { BatchLabelDialog } from './components/BatchLabelDialog'
 import { useLabelStore } from './store'
 
 export default function LabelDesignerPage(): JSX.Element {
-  const { canvasWidth, canvasHeight, elements, selectedId, setCanvasSize } = useLabelStore()
+  const { canvasWidth, canvasHeight, elements, selectedId, zoom, setCanvasSize } = useLabelStore()
+  const displayW = Math.round(canvasWidth * zoom)
+  const displayH = Math.round(canvasHeight * zoom)
   const selectedEl = elements.find((e) => e.id === selectedId)
   const [showSizeDialog, setShowSizeDialog] = useState(false)
+  const [showBatchDialog, setShowBatchDialog] = useState(false)
   const [tempW, setTempW] = useState(canvasWidth)
   const [tempH, setTempH] = useState(canvasHeight)
 
@@ -30,7 +34,17 @@ export default function LabelDesignerPage(): JSX.Element {
             }}
           >
             <Settings className="w-3.5 h-3.5" />
-            {canvasWidth}×{canvasHeight} px
+            {displayW}×{displayH} px
+          </button>
+          <span>|</span>
+          <button
+            className="flex items-center gap-1 hover:text-brand-primary transition-colors"
+            onClick={() => setShowBatchDialog(true)}
+            disabled={elements.length === 0}
+            title={elements.length === 0 ? '请先添加元素' : '批量生成标签'}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            批量生成
           </button>
           <span>|</span>
           <span>元素: {elements.length}</span>
@@ -101,6 +115,9 @@ export default function LabelDesignerPage(): JSX.Element {
           </div>
         </div>
       )}
+
+      {/* Batch label dialog */}
+      {showBatchDialog && <BatchLabelDialog onClose={() => setShowBatchDialog(false)} />}
     </div>
   )
 }

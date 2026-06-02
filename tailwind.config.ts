@@ -17,6 +17,7 @@ export default {
           danger: '#E0556A',
           'danger-hover': '#EB7A8A',
           success: '#36B89E',
+          warning: '#E8A840',
           accent: '#5BBCE8',
           'text-primary': '#E2ECF2',
           'text-secondary': '#889EB0',

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { toCanvas } from 'qrcode'
 import JsBarcode from 'jsbarcode'
-import { Image, QrCode, Type, Barcode, Download, X } from 'lucide-react'
+import { Image, QrCode, Type, Barcode, Download, X, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/use-toast'
 import { useLabelStore } from '../store'
@@ -9,11 +9,13 @@ import { useLabelStore } from '../store'
 type AddDialog = null | { type: 'qr' } | { type: 'barcode' }
 
 export function ElementToolbar(): JSX.Element {
-  const { addElement, canvasWidth, canvasHeight } = useLabelStore()
+  const { addElement, canvasWidth, canvasHeight, elements } = useLabelStore()
   const imageInputRef = useRef<HTMLInputElement>(null)
   const [dialog, setDialog] = useState<AddDialog>(null)
   const [inputValue, setInputValue] = useState('')
   const [barcodeFmt, setBarcodeFmt] = useState('CODE128')
+  const [useEncryption, setUseEncryption] = useState(false)
+  const [encPassword, setEncPassword] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const addText = useCallback(() => {
@@ -27,12 +29,15 @@ export function ElementToolbar(): JSX.Element {
       textContent: '文本',
       fontSize: 14,
       fontColor: '#000000',
+      fontFamily: 'sans-serif',
     })
   }, [addElement, canvasWidth, canvasHeight])
 
   const openQrDialog = useCallback(() => {
     setDialog({ type: 'qr' })
     setInputValue('')
+    setUseEncryption(false)
+    setEncPassword('')
     setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
 
@@ -40,6 +45,8 @@ export function ElementToolbar(): JSX.Element {
     setDialog({ type: 'barcode' })
     setInputValue('')
     setBarcodeFmt('CODE128')
+    setUseEncryption(false)
+    setEncPassword('')
     setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
 
@@ -55,6 +62,8 @@ export function ElementToolbar(): JSX.Element {
         height: size,
         rotation: 0,
         qrContent: inputValue.trim(),
+        encrypted: useEncryption,
+        encPassword: useEncryption ? encPassword : undefined,
       })
     } else if (dialog?.type === 'barcode') {
       addElement({
@@ -66,15 +75,21 @@ export function ElementToolbar(): JSX.Element {
         rotation: 0,
         barcodeContent: inputValue.trim(),
         barcodeFormat: barcodeFmt,
+        encrypted: useEncryption,
+        encPassword: useEncryption ? encPassword : undefined,
       })
     }
     setDialog(null)
     setInputValue('')
-  }, [dialog, inputValue, barcodeFmt, addElement, canvasWidth, canvasHeight])
+    setUseEncryption(false)
+    setEncPassword('')
+  }, [dialog, inputValue, barcodeFmt, useEncryption, encPassword, addElement, canvasWidth, canvasHeight])
 
   const closeDialog = useCallback(() => {
     setDialog(null)
     setInputValue('')
+    setUseEncryption(false)
+    setEncPassword('')
   }, [])
 
   const handleImageUpload = useCallback(
@@ -135,17 +150,29 @@ export function ElementToolbar(): JSX.Element {
           const img = await loadImage(el.imageDataUrl)
           ctx.drawImage(img, el.x, el.y, el.width, el.height)
         } else if (el.type === 'qr' && el.qrContent) {
-          const qrCanvas = await renderQrToCanvas(el.qrContent, el.width)
+          let content = el.qrContent
+          if (el.encrypted && el.encPassword) {
+            const { encrypt } = await import('@/utils/crypto')
+            content = await encrypt(content, el.encPassword)
+          }
+          const qrCanvas = await renderQrToCanvas(content, el.width)
           ctx.drawImage(qrCanvas, el.x, el.y, el.width, el.height)
         } else if (el.type === 'text') {
           ctx.fillStyle = el.fontColor ?? '#000000'
           const fontSize = el.fontSize ?? 14
-          ctx.font = `${fontSize}px sans-serif`
+          ctx.font = `${fontSize}px ${el.fontFamily ?? 'sans-serif'}`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillText(el.textContent || '', el.x + el.width / 2, el.y + el.height / 2)
         } else if (el.type === 'barcode' && el.barcodeContent) {
-          const bcCanvas = await renderBarcodeToCanvas(el.barcodeContent, el.barcodeFormat ?? 'CODE128', el.width, el.height)
+          let content = el.barcodeContent
+          let format = el.barcodeFormat ?? 'CODE128'
+          if (el.encrypted && el.encPassword) {
+            const { encrypt } = await import('@/utils/crypto')
+            content = await encrypt(content, el.encPassword)
+            format = 'CODE128' // encrypted data forces CODE128
+          }
+          const bcCanvas = await renderBarcodeToCanvas(content, format, el.width, el.height)
           ctx.drawImage(bcCanvas, el.x, el.y, el.width, el.height)
         }
       } catch {
@@ -167,6 +194,8 @@ export function ElementToolbar(): JSX.Element {
     }
   }, [])
 
+  const hasElements = elements.length > 0
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -184,7 +213,7 @@ export function ElementToolbar(): JSX.Element {
           <Barcode className="w-4 h-4 mr-1.5" /> 条码
         </Button>
         <div className="w-px h-6 bg-brand-border mx-1" />
-        <Button size="sm" onClick={handleExport}>
+        <Button size="sm" onClick={handleExport} disabled={!hasElements}>
           <Download className="w-4 h-4 mr-1.5" /> 导出 PNG
         </Button>
       </div>
@@ -193,7 +222,7 @@ export function ElementToolbar(): JSX.Element {
       {dialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={closeDialog}>
           <div
-            className="bg-brand-surface border border-brand-border rounded-xl p-5 w-80 space-y-4 shadow-xl"
+            className="bg-brand-surface border border-brand-border rounded-xl p-5 w-80 space-y-4 shadow-xl max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -204,6 +233,8 @@ export function ElementToolbar(): JSX.Element {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Content input */}
             <div>
               <label className="text-xs text-brand-text-muted block mb-1">
                 {dialog.type === 'qr' ? '二维码内容' : '条码内容'}
@@ -212,12 +243,16 @@ export function ElementToolbar(): JSX.Element {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') confirmDialog() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !useEncryption) confirmDialog()
+                }}
                 placeholder={dialog.type === 'qr' ? '输入文本或 URL...' : '仅支持 ASCII 字符'}
                 className="w-full rounded border border-brand-border bg-brand-bg px-3 py-2 text-sm text-brand-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
-            {dialog.type === 'barcode' && (
+
+            {/* Barcode format */}
+            {dialog.type === 'barcode' && !useEncryption && (
               <div>
                 <label className="text-xs text-brand-text-muted block mb-1">条码格式</label>
                 <select
@@ -233,13 +268,61 @@ export function ElementToolbar(): JSX.Element {
                 </select>
               </div>
             )}
+
+            {/* Encryption toggle */}
+            <div className="border-t border-brand-border pt-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useEncryption}
+                  onChange={(e) => {
+                    setUseEncryption(e.target.checked)
+                    if (e.target.checked && dialog.type === 'barcode') {
+                      setBarcodeFmt('CODE128')
+                    }
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-8 h-4 bg-brand-border rounded-full peer-checked:bg-brand-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all relative" />
+                <span className="text-xs text-brand-text-secondary flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  AES-256-GCM 加密
+                </span>
+              </label>
+
+              {useEncryption && (
+                <div className="mt-2">
+                  <input
+                    type="password"
+                    value={encPassword}
+                    onChange={(e) => setEncPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && encPassword) confirmDialog()
+                    }}
+                    placeholder="输入加密密码..."
+                    className="w-full rounded border border-brand-border bg-brand-bg px-3 py-1.5 text-sm text-brand-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  {dialog.type === 'barcode' && (
+                    <p className="text-[10px] text-brand-text-muted mt-1">
+                      加密后自动使用 Code128 格式
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2 justify-end">
-              <button onClick={closeDialog}
-                className="px-3 py-1.5 text-xs rounded-md text-brand-text-secondary hover:text-brand-text-primary transition-colors">
+              <button
+                onClick={closeDialog}
+                className="px-3 py-1.5 text-xs rounded-md text-brand-text-secondary hover:text-brand-text-primary transition-colors"
+              >
                 取消
               </button>
-              <button onClick={confirmDialog} disabled={!inputValue.trim()}
-                className="px-3 py-1.5 text-xs rounded-md bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors">
+              <button
+                onClick={confirmDialog}
+                disabled={!inputValue.trim() || (useEncryption && !encPassword)}
+                className="px-3 py-1.5 text-xs rounded-md bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors"
+              >
                 添加
               </button>
             </div>

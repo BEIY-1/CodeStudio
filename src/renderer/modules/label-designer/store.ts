@@ -18,6 +18,10 @@ export interface LabelElement {
   // style
   fontSize?: number
   fontColor?: string
+  fontFamily?: string
+  // encryption (qr / barcode)
+  encrypted?: boolean
+  encPassword?: string
 }
 
 interface LabelDesignerState {
@@ -26,6 +30,8 @@ interface LabelDesignerState {
   canvasWidth: number  // px
   canvasHeight: number // px
   nextZ: number
+  zoom: number         // user-controlled zoom level (0.25 - 2.0)
+  autoFit: boolean     // when true, auto-fit to container; false = manual zoom
 
   // actions
   addElement: (el: Omit<LabelElement, 'id' | 'zIndex'>) => void
@@ -33,6 +39,8 @@ interface LabelDesignerState {
   removeElement: (id: string) => void
   selectElement: (id: string | null) => void
   setCanvasSize: (w: number, h: number) => void
+  setZoom: (zoom: number) => void
+  fitToScreen: () => void
   bringForward: (id: string) => void
   sendBackward: (id: string) => void
   clearAll: () => void
@@ -49,6 +57,8 @@ export const useLabelStore = create<LabelDesignerState>((set, get) => ({
   canvasWidth: 400,
   canvasHeight: 300,
   nextZ: 1,
+  zoom: 1,
+  autoFit: true,
 
   addElement: (el) => {
     const { nextZ } = get()
@@ -79,6 +89,14 @@ export const useLabelStore = create<LabelDesignerState>((set, get) => ({
 
   setCanvasSize: (w, h) => {
     set({ canvasWidth: w, canvasHeight: h })
+  },
+
+  setZoom: (zoom) => {
+    set({ zoom: Math.max(0.25, Math.min(2, zoom)), autoFit: false })
+  },
+
+  fitToScreen: () => {
+    set({ autoFit: true })
   },
 
   bringForward: (id) => {

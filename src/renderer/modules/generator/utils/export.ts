@@ -44,8 +44,13 @@ export function exportQRCode(
       const dataUrl2 = canvas.toDataURL('image/png')
       const img = new Image()
       img.onload = () => {
-        const pdf = new jsPDF({ unit: 'px', format: [img.width + 20, img.height + 20] })
-        pdf.addImage(dataUrl2, 'PNG', 10, 10, img.width, img.height)
+        const pw = img.width + 20
+        const ph = img.height + 20
+        const pdf = new jsPDF({
+          unit: 'px', format: [pw, ph], hotfixes: ['px_scaling'],
+          orientation: pw >= ph ? 'landscape' : 'portrait',
+        })
+        pdf.addImage(img, 'PNG', 10, 10, img.width, img.height)
         pdf.save(`${filename}.pdf`)
       }
       img.src = dataUrl2
@@ -91,8 +96,13 @@ export function exportBarcode(
       downloadFile(dataUrl, `${filename}.png`)
     } else if (format === 'PDF') {
       import('jspdf').then(({ default: jsPDF }) => {
-        const pdf = new jsPDF({ unit: 'px', format: [c.width + 20, c.height + 20] })
-        pdf.addImage(dataUrl, 'PNG', 10, 10, c.width, c.height)
+        const pw = c.width + 20
+        const ph = c.height + 20
+        const pdf = new jsPDF({
+          unit: 'px', format: [pw, ph], hotfixes: ['px_scaling'],
+          orientation: pw >= ph ? 'landscape' : 'portrait',
+        })
+        pdf.addImage(img, 'PNG', 10, 10, c.width, c.height)
         pdf.save(`${filename}.pdf`)
       })
     }

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { QrCode, Scan, Layers, History, ArrowRight, Cpu, Shield, Zap } from 'lucide-react'
+import { QrCode, Scan, Layers, PenTool, ArrowRight, Cpu, Shield, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 
@@ -7,7 +7,7 @@ const modules = [
   { icon: QrCode, title: '生成器', desc: 'QR · 条码 · 加密二维码', path: '/generator' },
   { icon: Scan, title: '解码器', desc: '图片 · 摄像头 · 扫码枪 · 多码', path: '/decoder' },
   { icon: Layers, title: '批量中心', desc: 'Excel 导入 · 模板 · 批量生成', path: '/batch' },
-  { icon: History, title: '历史记录', desc: '追溯 · 搜索 · 收藏 · 标签', path: '/history' },
+  { icon: PenTool, title: '标签设计', desc: '拖拽画布 · 二维码/条码/文本 · 批量打印', path: '/label-designer' },
 ]
 
 export default function DashboardPage(): JSX.Element {
